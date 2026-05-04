@@ -1,0 +1,30 @@
+name: Manual Promotion Pipeline
+
+on:
+  workflow_dispatch:
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+
+      - name: Promote to dev
+        run: |
+          git fetch origin
+          git checkout dev || git checkout -b dev
+          git merge main --no-ff
+          git push origin dev
+
+      - name: Promote to prod
+        run: |
+          git fetch origin
+          git checkout prod || git checkout -b prod
+          git merge dev --no-ff
+          git push origin prod
