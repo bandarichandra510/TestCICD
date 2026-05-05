@@ -3,7 +3,7 @@ name: Python CI/CD Pipeline
 on:
   workflow_dispatch:   # manual trigger
   push:
-    branches: [ "main" ]
+    branches: [ "main" ]   # also runs when you push to main
 
 jobs:
   build-and-test:
@@ -47,7 +47,7 @@ jobs:
             git checkout -b dev
             git push origin dev
           else
-            git checkout dev
+            git checkout -B dev origin/dev
             git merge main --no-ff
             git push origin dev
           fi
@@ -75,7 +75,7 @@ jobs:
             git checkout -b prod
             git push origin prod
           else
-            git checkout prod
+            git checkout -B prod origin/prod
             git merge dev --no-ff
             git push origin prod
           fi
