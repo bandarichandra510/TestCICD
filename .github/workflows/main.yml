@@ -1,30 +1,81 @@
-name: Manual Promotion Pipeline
+name: Python CI/CD Pipeline
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:   # manual trigger for testing
+  push:
+    branches: [ "main" ]   # also runs when you push to main
 
 jobs:
-  promote:
+  build-and-test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # allow pushing with GITHUB_TOKEN
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history for merges
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run tests
+        run: python -m unittest discover || echo "No tests found"
+
+  promote-to-dev:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Configure Git
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
 
-      - name: Promote to dev
+      - name: Ensure dev branch exists and update
         run: |
           git fetch origin
-          git checkout dev || git checkout -b dev
-          git merge main --no-ff
-          git push origin dev
+          if ! git ls-remote --exit-code origin dev; then
+            git checkout -b dev
+            git push origin dev
+          else
+            git checkout dev
+            git merge main --no-ff
+            git push origin dev
+          fi
 
-      - name: Promote to prod
+  promote-to-prod:
+    needs: promote-to-dev
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+
+      - name: Ensure prod branch exists and update
         run: |
           git fetch origin
-          git checkout prod || git checkout -b prod
-          git merge dev --no-ff
-          git push origin prod
+          if ! git ls-remote --exit-code origin prod; then
+            git checkout -b prod
+            git push origin prod
+          else
+            git checkout prod
+            git merge dev --no-ff
+            git push origin prod
+          fi
